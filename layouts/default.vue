@@ -4,6 +4,7 @@
       v-model="drawer"
       :mini-variant="miniVariant"
       :clipped="clipped"
+      permanent
       fixed
       app
     >
@@ -25,7 +26,6 @@
       </v-list>
     </v-navigation-drawer>
     <v-app-bar :clipped-left="clipped" fixed app>
-      <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
       <v-btn icon @click.stop="miniVariant = !miniVariant">
         <v-icon>mdi-{{ `chevron-${miniVariant ? "right" : "left"}` }}</v-icon>
       </v-btn>
@@ -43,7 +43,7 @@
   </v-app>
 </template>
 
-<script>
+<script lang="ts">
 export default {
   data() {
     return {
@@ -62,7 +62,7 @@ export default {
           to: "/hino",
         },
         {
-          icon: "mdi-chart-bubble",
+          icon: "mdi-baseball-bat",
           title: "育成シム",
           to: "/simulator",
         },
