@@ -67,6 +67,48 @@
         </v-simple-table>
       </v-col>
     </v-row>
+    <v-row>
+      <v-col :cols="12">
+        <h2>練習シミュ</h2>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col :cols="4" align-self="end">
+        <v-select
+          v-model="growthType"
+          class="mb-5"
+          label="成長型"
+          hide-details
+          :items="GrowthTypeNames"
+        ></v-select>
+      </v-col>
+      <v-col :cols="4" align-self="end">
+        <v-slider
+          v-model="age"
+          class="mb-5"
+          min="18"
+          max="35"
+          thumb-label="always"
+          label="現在年齢"
+          hide-details
+        ></v-slider>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col cols="12">
+        <h3>成長曲線</h3>
+        <v-sparkline
+          auto-draw
+          :labels="growthLabels"
+          :label-size="5"
+          color="grey lighten-1"
+          :value="growthLine"
+          :smooth="5"
+          :gradient="graphGradient"
+          gradient-direction="bottom"
+        ></v-sparkline>
+      </v-col>
+    </v-row>
     <v-snackbar v-model="showingResult" color="info" :timeout="3000" top>
       {{ resultText }}
       <v-btn text @click="closeResult">
@@ -78,8 +120,18 @@
 
 <script lang="ts">
 import Vue from "vue";
+import _ from "lodash";
 import {calcExp, StatusNames, StatusSet, StatusType} from "~/models/status";
 import StatusInputs from "~/components/StatusInputs.vue";
+import {
+  GrowthPatternByAgeMaster,
+  GrowthType,
+  GrowthTypeNames,
+  Period,
+  PeriodColorMap,
+  PeriodNames,
+} from "~/models/pattern";
+import PatternMaster from "~/models/pattern-master";
 
 type ExpMap = {
   [key in StatusType]: number;
@@ -90,18 +142,49 @@ export default Vue.extend({
     StatusInputs,
   },
   data() {
+    const graphGradient = PeriodNames.map((p) => PeriodColorMap[p as Period]);
     return {
       currentStatus: {} as StatusSet,
       goalStatus: {} as StatusSet,
       requiredExpMap: {} as ExpMap,
       goalExpMap: {} as ExpMap,
       StatusNames,
+      GrowthTypeNames,
       dialog: false,
       showingResult: false,
-      resultText: "",
+      resultText: "" as string,
+      growthType: "" as GrowthType,
+      age: 18,
+      GrowthPatternByAgeMaster,
+      PeriodColorMap,
+      graphGradient,
     };
   },
-  computed: {},
+  computed: {
+    /**
+     * 非AP大の最小値でてきとうにグラフ用の値を作る
+     */
+    growthLine(): number[] {
+      if (!this.growthType) return [];
+      const growthMap = GrowthPatternByAgeMaster[this.growthType];
+      const res = [] as number[];
+      for (let i = 18; i <= 35; ++i) {
+        const gt = growthMap[i] as Period;
+        const mst = PatternMaster[gt];
+        res.push(mst.非AP大[0]);
+      }
+      return res;
+    },
+    growthLabels(): any[] {
+      return _.range(18, 36);
+      // ラベルに成長期も入れようとしてた名残。（みっちりするので解決策がみつかるまでやめた）
+      // if (!this.growthType) return range;
+      // const growthMap = GrowthPatternByAgeMaster[this.growthType];
+      // return range.map((age) => {
+      //   return `${age}歳`;
+      // });
+    },
+  },
   mounted() {
     this.loadSettings();
   },
@@ -118,6 +201,8 @@ export default Vue.extend({
     saveSettings() {
       localStorage.currentStatus = JSON.stringify(this.currentStatus);
       localStorage.goalStatus = JSON.stringify(this.goalStatus);
+      localStorage.growthType = this.growthType;
+      localStorage.age = this.age;
       this.showResult("セーブしました");
     },
     loadSettings() {
@@ -128,12 +213,16 @@ export default Vue.extend({
       }
       this.currentStatus = JSON.parse(current) as StatusSet;
       this.goalStatus = JSON.parse(goal) as StatusSet;
+      this.growthType = localStorage.growthType;
+      this.age = localStorage.age;
       this.updateHandler();
       this.showResult("データをロードしました");
     },
     clearSettings() {
       localStorage.removeItem("currentStatus");
       localStorage.removeItem("goalStatus");
+      localStorage.removeItem("growthType");
+      localStorage.removeItem("age");
       this.currentStatus = {} as StatusSet;
       this.goalStatus = {} as StatusSet;
       this.dialog = false;

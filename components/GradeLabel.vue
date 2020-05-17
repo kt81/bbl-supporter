@@ -1,5 +1,11 @@
 <template>
-  <span :class="this.$style[grade]">{{ grade }}</span>
+  <span
+    :class="{
+      gradeLabel: true,
+      [grade]: true,
+    }"
+    >{{ grade }}</span
+  >
 </template>
 
 <script lang="ts">
@@ -21,8 +27,8 @@ export default Vue.extend({
 });
 </script>
 
-<style lang="scss" module>
-span {
+<style lang="scss" scoped>
+span.gradeLabel {
   font-weight: bold;
   color: #6a6a68; // default - G
 }
