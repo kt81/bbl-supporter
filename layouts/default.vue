@@ -4,18 +4,13 @@
       v-model="drawer"
       :mini-variant="miniVariant"
       :clipped="clipped"
-      permanent
+      :mobile-break-point="600"
+      bottom
       fixed
       app
     >
       <v-list>
-        <v-list-item
-          v-for="(item, i) in items"
-          :key="i"
-          :to="item.to"
-          router
-          exact
-        >
+        <v-list-item v-for="(item, i) in items" :key="i" :to="item.to" router exact>
           <v-list-item-action>
             <v-icon>{{ item.icon }}</v-icon>
           </v-list-item-action>
@@ -26,7 +21,8 @@
       </v-list>
     </v-navigation-drawer>
     <v-app-bar :clipped-left="clipped" fixed app>
-      <v-btn icon @click.stop="miniVariant = !miniVariant">
+      <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-btn v-if="!isMobile" icon @click.stop="miniVariant = !miniVariant">
         <v-icon>mdi-{{ `chevron-${miniVariant ? "right" : "left"}` }}</v-icon>
       </v-btn>
       <v-toolbar-title v-text="title" />
@@ -70,6 +66,11 @@ export default {
       miniVariant: false,
       title: "BBL Supporter",
     };
+  },
+  computed: {
+    isMobile() {
+      return window.innerWidth < 600;
+    },
   },
 };
 </script>
