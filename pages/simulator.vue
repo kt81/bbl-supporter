@@ -94,21 +94,57 @@
         ></v-slider>
       </v-col>
     </v-row>
-    <v-row>
-      <v-col cols="12">
-        <h3>成長曲線</h3>
-        <v-sparkline
-          auto-draw
-          :labels="growthLabels"
-          :label-size="5"
-          color="grey lighten-1"
-          :value="growthLine"
-          :smooth="5"
-          :gradient="graphGradient"
-          gradient-direction="bottom"
-        ></v-sparkline>
-      </v-col>
-    </v-row>
+    <div v-if="growthType">
+      <v-row>
+        <v-col cols="12">
+          <h3>成長曲線</h3>
+          <v-sparkline
+            auto-draw
+            :labels="growthLabels"
+            :label-size="5"
+            color="grey lighten-1"
+            :value="growthLine"
+            :smooth="5"
+            :gradient="graphGradient"
+            gradient-direction="bottom"
+          ></v-sparkline>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col cols="12">
+          <h3 class="mb-3">年代別練習</h3>
+          <h4>計算後の値（衰えを考慮しない)</h4>
+          <status-inputs :value="calcStatus" readonly></status-inputs>
+          <v-container>
+            <v-row>
+              <v-col cols="12">▼それぞれの練習回数を入力</v-col>
+              <v-col v-for="(item, planAge) in trainingPlan" :key="planAge" cols="3">
+                <v-card
+                  :color="periodColorMapByAge[planAge]"
+                  max-width="300"
+                  min-width="200"
+                  outlined
+                >
+                  <v-card-title>{{ planAge }}〜{{ Number(planAge) + 1 }}歳</v-card-title>
+                  <v-card-text class="pr-1">
+                    <v-text-field
+                      v-for="sType in StatusNames"
+                      :key="sType"
+                      :label="sType"
+                      hide-details
+                      dense
+                      type="number"
+                      min="0"
+                      max="60"
+                    ></v-text-field>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-col>
+      </v-row>
+    </div>
     <v-snackbar v-model="showingResult" color="info" :timeout="3000" top>
       {{ resultText }}
       <v-btn text @click="closeResult">
@@ -136,6 +172,10 @@ import PatternMaster from "~/models/pattern-master";
 type ExpMap = {
   [key in StatusType]: number;
 };
+declare const Charge = "練習溜め";
+type ChargeType = typeof Charge;
+type TrainingSet = {[type in StatusType | ChargeType]: number};
+type TrainingPlan = {[age in number]: TrainingSet};
 export default Vue.extend({
   name: "Simulator",
   components: {
@@ -143,6 +183,10 @@ export default Vue.extend({
   },
   data() {
     const graphGradient = PeriodNames.map((p) => PeriodColorMap[p as Period]);
+    const trainingPlan = {} as TrainingPlan;
+    _.range(18, 36, 2).forEach((age) => {
+      trainingPlan[age] = {} as TrainingSet;
+    });
     return {
       currentStatus: {} as StatusSet,
       goalStatus: {} as StatusSet,
@@ -158,6 +202,7 @@ export default Vue.extend({
       GrowthPatternByAgeMaster,
       PeriodColorMap,
       graphGradient,
+      trainingPlan,
     };
   },
   computed: {
@@ -184,6 +229,23 @@ export default Vue.extend({
       //   return `${age}歳`;
       // });
     },
+    periodColorMapByAge(): {[age in number]: string} {
+      if (!this.growthType) return {};
+      const periodAgeColorMap: {[age in number]: string} = {};
+      _.range(18, 36, 2).forEach((i) => {
+        periodAgeColorMap[i] = PeriodColorMap[GrowthPatternByAgeMaster[this.growthType][i]];
+      });
+      return periodAgeColorMap;
+    },
+    calcStatus(): StatusSet {
+      const out = {} as StatusSet;
+      for (const s in this.currentStatus) {
+        const st = s as StatusType;
+        // TODO ここで練習値を足したり引いたりする処理
+        out[st] = this.currentStatus[st];
+      }
+      return out;
+    },
   },
   mounted() {
     this.loadSettings();
@@ -203,11 +265,13 @@ export default Vue.extend({
       localStorage.goalStatus = JSON.stringify(this.goalStatus);
       localStorage.growthType = this.growthType;
       localStorage.age = this.age;
+      localStorage.trainingPlan = JSON.stringify(this.trainingPlan);
       this.showResult("セーブしました");
     },
     loadSettings() {
       const current = localStorage.currentStatus;
       const goal = localStorage.goalStatus;
+      const trainingPlan = localStorage.trainingPlan;
       if (!current || !goal) {
         return;
       }
@@ -215,6 +279,7 @@ export default Vue.extend({
       this.goalStatus = JSON.parse(goal) as StatusSet;
       this.growthType = localStorage.growthType;
       this.age = localStorage.age;
+      this.trainingPlan = JSON.parse(trainingPlan) as TrainingPlan;
       this.updateHandler();
       this.showResult("データをロードしました");
     },
@@ -223,9 +288,12 @@ export default Vue.extend({
       localStorage.removeItem("goalStatus");
       localStorage.removeItem("growthType");
       localStorage.removeItem("age");
+      localStorage.removeItem("trainingPlan");
       this.currentStatus = {} as StatusSet;
       this.goalStatus = {} as StatusSet;
       this.dialog = false;
+      this.age = 18;
+      this.trainingPlan = {};
       this.showResult("セーブをクリアしました");
     },
     showResult(message: string) {

@@ -17,6 +17,7 @@
           hide-details
           :value="lazyValue[pType]"
           @input="update(pType, $event)"
+          :readonly="readonly"
         />
       </v-col>
     </v-row>
@@ -35,6 +36,7 @@ export default Vue.extend({
       type: Object as PropType<StatusSet>,
       default: () => ({} as StatusSet),
     },
+    readonly: Boolean,
   },
   data: () => ({
     lazyValue: {} as StatusSet,
