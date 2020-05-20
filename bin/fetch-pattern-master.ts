@@ -18,15 +18,12 @@ async function main() {
   const res = await loadSheet(sheets);
 
   global.console.log("Writing data...");
-  fs.writeFileSync(
-    OUT_FILE,
-    "import {GrowthTable} from '~/models/pattern';\n\n" +
-      "// noinspection NonAsciiCharacters,JSNonASCIINames\n" +
-      "export default " +
-      JSON.stringify(res, null, 2) +
-      " as GrowthTable;",
-    "utf8"
-  );
+  const template = `
+import {GrowthTable} from "~/models/pattern";
+
+export default ${JSON.stringify(res, null, 2)} as GrowthTable;
+`;
+  fs.writeFileSync(OUT_FILE, template, "utf8");
 }
 
 async function loadSheet(sheets: SheetsApi.Sheets) {

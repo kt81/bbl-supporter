@@ -172,10 +172,6 @@ import PatternMaster from "~/models/pattern-master";
 type ExpMap = {
   [key in StatusType]: number;
 };
-declare const Charge = "練習溜め";
-type ChargeType = typeof Charge;
-type TrainingSet = {[type in StatusType | ChargeType]: number};
-type TrainingPlan = {[age in number]: TrainingSet};
 export default Vue.extend({
   name: "Simulator",
   components: {
@@ -237,14 +233,17 @@ export default Vue.extend({
       });
       return periodAgeColorMap;
     },
-    calcStatus(): StatusSet {
-      const out = {} as StatusSet;
-      for (const s in this.currentStatus) {
-        const st = s as StatusType;
-        // TODO ここで練習値を足したり引いたりする処理
-        out[st] = this.currentStatus[st];
-      }
-      return out;
+    calcStatus: {
+      cache: false,
+      get(): StatusSet {
+        const out = {} as StatusSet;
+        for (const s in this.currentStatus) {
+          const st = s as StatusType;
+          // TODO ここで練習値を足したり引いたりする処理
+          out[st] = this.currentStatus[st];
+        }
+        return out;
+      },
     },
   },
   mounted() {
@@ -256,8 +255,8 @@ export default Vue.extend({
         const type = StatusNames[s];
         const current = this.currentStatus[type];
         const goal = this.goalStatus[type];
-        this.$data.goalExpMap[type] = calcExp(type, goal);
-        this.$data.requiredExpMap[type] = calcExp(type, goal, current);
+        this.goalExpMap[type] = calcExp(type, goal);
+        this.requiredExpMap[type] = calcExp(type, goal, current);
       }
     },
     saveSettings() {

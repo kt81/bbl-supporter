@@ -2,6 +2,8 @@
  * 成長パターン管理
  */
 /* eslint-disable no-labels,no-prototype-builtins */
+import {StatusType} from "~/models/status";
+
 export default class Pattern {
   public static createFromMatrix(matrix: any[][]) {
     matrix.shift(); // header
@@ -15,15 +17,15 @@ export default class Pattern {
       }
       const pattern = {} as GrowthPattern;
       row.shift(); // row header
-      for (const t in GrowthPeriodNames) {
-        if (!GrowthPeriodNames.hasOwnProperty(t)) continue;
+      for (const t in StatusGrowthTypeNames) {
+        if (!StatusGrowthTypeNames.hasOwnProperty(t)) continue;
         const val = row.shift() as string;
         if (val == null) {
-          window.console.error("Column is too few. type:" + GrowthPeriodNames[t]);
+          window.console.error("Column is too few. type:" + StatusGrowthTypeNames[t]);
           break LOOP;
         }
         const [min, max] = val.split("〜");
-        pattern[GrowthPeriodNames[t]] = [Number(min), Number(max)];
+        pattern[StatusGrowthTypeNames[t]] = [Number(min), Number(max)];
       }
       out[PeriodNames[period]] = pattern;
     }
@@ -72,7 +74,7 @@ export default class Pattern {
 }
 
 export type GrowthPattern = {
-  [key in PointGrowthType]: [number, number];
+  [key in StatusGrowthType]: [number, number];
 };
 export type GrowthTable = {
   [key in Period]: GrowthPattern;
@@ -119,16 +121,26 @@ export const PeriodColorMap = {
 /**
  * 基本は全部大。Weakだけ小
  */
-export const GrowthPeriodNames = [
+export const StatusGrowthTypeNames = [
+  "総合AP大",
   "ミートAP大",
   "パワーAP大",
   "コン守備AP大",
-  "変化球AP大",
+  "変化AP小",
   "新球",
   "非AP大",
   "非AP小",
 ] as const;
-export type PointGrowthType = typeof GrowthPeriodNames[number];
+export type StatusGrowthType = typeof StatusGrowthTypeNames[number];
+export const StatusGrowthMap = {
+  ミート: "ミートAP大",
+  パワー: "パワーAP大",
+  走力: "総合AP大",
+  守備: "総合AP大",
+  小技: "非AP大",
+  精神: "非AP大",
+  // TODO 投手分
+} as {[key in StatusType]: StatusGrowthType};
 
 export const enum SkillType {
   None,

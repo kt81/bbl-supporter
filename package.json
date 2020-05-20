@@ -10,7 +10,7 @@
     "start": "nuxt start",
     "generate": "nuxt generate",
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
-    "fetch-pattern-master": "ts-node -s bin/fetch-pattern-master.ts",
+    "fetch-pattern-master": "env TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' ts-node -s bin/fetch-pattern-master.ts",
     "test": "jest"
   },
   "dependencies": {
