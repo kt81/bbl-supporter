@@ -73,16 +73,16 @@
       </v-col>
     </v-row>
     <v-row>
-      <v-col :cols="4" align-self="end">
+      <v-col cols="12" md="6" align-self="end">
         <v-select
           v-model="growthType"
           class="mb-5"
           label="成長型"
           hide-details
           :items="GrowthTypeNames"
-        ></v-select>
+        />
       </v-col>
-      <v-col :cols="4" align-self="end">
+      <v-col cols="12" md="6" align-self="end">
         <v-slider
           v-model="age"
           class="mb-5"
@@ -91,7 +91,10 @@
           thumb-label="always"
           label="現在年齢"
           hide-details
-        ></v-slider>
+        />
+      </v-col>
+      <v-col cols="12" md="6" align-self="end">
+        <v-select v-model="ap" class="mb-5" label="AP" hide-details :items="StatusNames" />
       </v-col>
     </v-row>
     <div v-if="growthType">
@@ -113,33 +116,21 @@
       <v-row>
         <v-col cols="12">
           <h3 class="mb-3">年代別練習</h3>
-          <h4>計算後の値（衰えを考慮しない)</h4>
-          <status-inputs :value="calcStatus" readonly></status-inputs>
           <v-container>
             <v-row>
               <v-col cols="12">▼それぞれの練習回数を入力</v-col>
-              <v-col v-for="(item, planAge) in trainingPlan" :key="planAge" cols="3">
-                <v-card
-                  :color="periodColorMapByAge[planAge]"
-                  max-width="300"
-                  min-width="200"
-                  outlined
-                >
-                  <v-card-title>{{ planAge }}〜{{ Number(planAge) + 1 }}歳</v-card-title>
-                  <v-card-text class="pr-1">
-                    <v-text-field
-                      v-for="sType in StatusNames"
-                      :key="sType"
-                      :label="sType"
-                      hide-details
-                      dense
-                      type="number"
-                      min="0"
-                      max="60"
-                    ></v-text-field>
-                  </v-card-text>
-                </v-card>
-              </v-col>
+              <div v-for="(trainingSet, planAge) in trainingPlan" :key="planAge">
+                <v-col v-if="planAge >= age" cols="12" class="pa-0">
+                  <age-training-card
+                    v-model="trainingPlan[planAge]"
+                    :ap="ap"
+                    :age="Number(planAge)"
+                    :growth-type="growthType"
+                    :init-status="periodicStatusSet[planAge]"
+                    :init-exp-fraction="periodicExpFractionSet[planAge]"
+                  />
+                </v-col>
+              </div>
             </v-row>
           </v-container>
         </v-col>
@@ -158,7 +149,7 @@
 import Vue from "vue";
 import _ from "lodash";
 import {calcExp, StatusNames, StatusSet, StatusType} from "~/models/status";
-import StatusInputs from "~/components/StatusInputs.vue";
+import StatusInputs from "~/components/simulator/StatusInputs.vue";
 import {
   GrowthPatternByAgeMaster,
   GrowthType,
@@ -167,33 +158,46 @@ import {
   PeriodColorMap,
   PeriodNames,
 } from "~/models/pattern";
+import {ExpSet, TrainingPlan, TrainingSet} from "~/models/training";
 import PatternMaster from "~/models/pattern-master";
+import AgeTrainingCard from "~/components/simulator/AgeTrainingCard.vue";
 
-type ExpMap = {
-  [key in StatusType]: number;
+type PeriodicStatusSet = {
+  [age in number]: StatusSet;
+};
+type PeriodicFractionExpSet = {
+  [age in number]: ExpSet;
 };
 export default Vue.extend({
   name: "Simulator",
   components: {
+    AgeTrainingCard,
     StatusInputs,
   },
   data() {
     const graphGradient = PeriodNames.map((p) => PeriodColorMap[p as Period]);
     const trainingPlan = {} as TrainingPlan;
+    const periodicStatusSet = {} as PeriodicStatusSet;
+    const periodicFractionExpSet = {} as PeriodicFractionExpSet;
     _.range(18, 36, 2).forEach((age) => {
       trainingPlan[age] = {} as TrainingSet;
+      periodicStatusSet[age] = {} as StatusSet;
+      periodicFractionExpSet[age] = {} as ExpSet;
     });
     return {
       currentStatus: {} as StatusSet,
       goalStatus: {} as StatusSet,
-      requiredExpMap: {} as ExpMap,
-      goalExpMap: {} as ExpMap,
+      requiredExpMap: {} as ExpSet,
+      goalExpMap: {} as ExpSet,
+      periodicStatusSet,
+      periodicExpFractionSet: periodicFractionExpSet,
       StatusNames,
       GrowthTypeNames,
       dialog: false,
       showingResult: false,
       resultText: "" as string,
       growthType: "" as GrowthType,
+      ap: "" as StatusType,
       age: 18,
       GrowthPatternByAgeMaster,
       PeriodColorMap,
@@ -224,14 +228,6 @@ export default Vue.extend({
       // return range.map((age) => {
       //   return `${age}歳`;
       // });
-    },
-    periodColorMapByAge(): {[age in number]: string} {
-      if (!this.growthType) return {};
-      const periodAgeColorMap: {[age in number]: string} = {};
-      _.range(18, 36, 2).forEach((i) => {
-        periodAgeColorMap[i] = PeriodColorMap[GrowthPatternByAgeMaster[this.growthType][i]];
-      });
-      return periodAgeColorMap;
     },
     calcStatus: {
       cache: false,

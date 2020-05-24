@@ -5,13 +5,23 @@ import {
   StatusGrowthMap,
   StatusGrowthType,
 } from "~/models/pattern";
-import {evalGrade, ExpTable, StatusNames, StatusSet, StatusType} from "~/models/status";
+import {
+  calcExp,
+  evalGrade,
+  ExpTable,
+  Grade,
+  gradeIterator,
+  GradeMax,
+  StatusNames,
+  StatusSet,
+  StatusType,
+} from "~/models/status";
 import PatternMaster from "~/models/pattern-master";
 
 declare const Charge = "練習溜め";
-type ChargeType = typeof Charge;
-type TrainingSet = {[type in StatusType | ChargeType]: number};
-type TrainingPlan = {[age in number]: TrainingSet};
+export type ChargeType = typeof Charge;
+export type TrainingSet = {[type in StatusType | ChargeType]: number};
+export type TrainingPlan = {[age in number]: TrainingSet};
 
 /** イマイチやる気が出ない確率 */
 export const SluggishRatePrc = 5;
@@ -42,34 +52,67 @@ export const PenaltyTargetMap = {
 export type ExpSet = {
   [key in StatusType]: number;
 };
-export function calcLifetimePlan(
+export type TrainingResultSet = {
+  statusSet: StatusSet;
+  expSet: ExpSet;
+};
+export function calcAfterTrainingStatus(
+  age: number,
   ap: StatusType,
   growthType: GrowthType,
   currentStatus: StatusSet,
-  currentExp: ExpSet,
-  trainingPlan: TrainingPlan
-) {
+  currentFractionExp: ExpSet,
+  trainingSet: TrainingSet
+): TrainingResultSet {
   const periodMaster = GrowthPatternByAgeMaster[growthType];
-  for (const age in trainingPlan) {
-    const set = trainingPlan[age];
-    const period = periodMaster[age];
-    const points = calcUpDownInPeriod(period, ap, set);
-    for (const s in StatusNames) {
-      const status = s as StatusType;
-      const currentPoint = currentStatus[status];
-      const exp = currentExp[status];
-      const [upExp, downExp] = points[status];
-      // 現在のグレード
-      const [grade] = evalGrade(currentPoint);
-      // 経験値を取る
-      const reqExp = ExpTable[status][grade];
+  const period = periodMaster[age];
+  const points = calcUpDownInPeriod(period, ap, trainingSet);
+  const resStatusSet = {} as StatusSet;
+  const resExpSet = {} as ExpSet;
+  const result = {
+    statusSet: resStatusSet,
+    expSet: resExpSet,
+  } as TrainingResultSet;
+
+  for (const s in StatusNames) {
+    const statusType = s as StatusType;
+    let currentPoint = currentStatus[statusType];
+    let exp = currentFractionExp[statusType];
+
+    const [grade] = evalGrade(currentPoint);
+    const [upExp, downExp] = points[statusType];
+    const expF = calcExp(statusType, Grade.F);
+
+    // 減少分の処理。常に減少するやつを先にやるものとする
+    if (exp >= expF) {
+      exp += downExp;
+      if (exp < expF) {
+        // Gになったらそれ以上はさがらんのじゃ
+        exp = expF - 2; // TODO PenaltyMaster的なの1回分の半分を引く
+      }
     }
+    // 上昇
+    exp += upExp;
+    // 必要経験値を取る
+    const reqExp = ExpTable[statusType][grade];
+    // 各グレードでポイントを足していく
+    gradeIterator(grade, Grade.A).forEach((g) => {
+      const gradeMaxPoint = GradeMax[g];
+      while (exp >= reqExp) {
+        exp -= reqExp;
+        currentPoint++;
+        if (currentPoint >= gradeMaxPoint) return; // 次のグレードへ
+      }
+    });
+    resStatusSet[statusType] = currentPoint;
+    resExpSet[statusType] = exp;
   }
+  return result;
 }
 
 /**
  * 指定されたプランでの期間内のマイナス、プラスを計算する
- * @return [upExp:number, downExp:number]
+ * @return [upExp:number, downExp:number] downExpはマイナスで入ってる
  */
 export function calcUpDownInPeriod(
   period: Period,

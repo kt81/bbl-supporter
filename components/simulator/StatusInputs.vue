@@ -16,8 +16,8 @@
           aria-valuemax="100"
           hide-details
           :value="lazyValue[pType]"
-          @input="update(pType, $event)"
           :readonly="readonly"
+          @input="update(pType, $event)"
         />
       </v-col>
     </v-row>

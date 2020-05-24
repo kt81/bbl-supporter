@@ -8,6 +8,25 @@ export enum Grade {
   F = "F",
   G = "G",
 }
+// 本当にGeneratorするの大仰なのでやめた
+export function gradeIterator(from: Grade, to = Grade.S): Grade[] {
+  const out = [] as Grade[];
+  let isIgnored = true;
+  for (const g in Grade) {
+    if (isIgnored) {
+      if (g === from) {
+        isIgnored = false;
+      } else {
+        continue;
+      }
+    }
+    out.push(g as Grade);
+    if (to === g) {
+      break;
+    }
+  }
+  return out;
+}
 
 export const GradeMin: {[grade: string]: number} = {
   [Grade.S]: 100,
@@ -18,6 +37,16 @@ export const GradeMin: {[grade: string]: number} = {
   [Grade.E]: 30,
   [Grade.F]: 15,
   [Grade.G]: 1,
+};
+export const GradeMax: {[grade: string]: number} = {
+  [Grade.S]: 100,
+  [Grade.A]: 99,
+  [Grade.B]: 89,
+  [Grade.C]: 74,
+  [Grade.D]: 59,
+  [Grade.E]: 44,
+  [Grade.F]: 29,
+  [Grade.G]: 14,
 };
 
 export const ExpTable: {[key in StatusType]: {[key in Grade]: number}} = {
